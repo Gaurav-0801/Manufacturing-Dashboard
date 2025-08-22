@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Manufacturing SCM Dashboard",
   description: "Supply Chain Management System for Manufacturing",
-  generator: "v0.app",
+  generator: "Gaurav Pant",
 }
 
 export default function RootLayout({
