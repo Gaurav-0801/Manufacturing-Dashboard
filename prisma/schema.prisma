@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Supplier {
+  id              String    @id @default(cuid())
+  name            String    @unique // Added unique constraint to allow upsert by name
+  contactEmail    String
+  contactPhone    String?
+  address         String?
+  performanceScore Float    @default(0.0) // 0-100 score
+  totalOrders     Int       @default(0)
+  onTimeDeliveries Int      @default(0)
+  qualityRating   Float     @default(0.0) // 0-5 rating
+  costSavings     Float     @default(0.0) // Total cost savings provided
+  status          SupplierStatus @default(ACTIVE)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  shipments       Shipment[]
+  inventoryItems  InventoryItem[]
+  alerts          Alert[]
+  
+  @@map("suppliers")
+}
+
+model Shipment {
+  id              String    @id @default(cuid())
+  trackingNumber  String    @unique
+  supplierId      String
+  status          ShipmentStatus @default(PENDING)
+  expectedDate    DateTime
+  actualDate      DateTime?
+  origin          String
+  destination     String
+  totalValue      Float
+  weight          Float?
+  items           Json      // Array of items in shipment
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  supplier        Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  alerts          Alert[]
+  
+  @@map("shipments")
+}
+
+model InventoryItem {
+  id              String    @id @default(cuid())
+  sku             String    @unique
+  name            String
+  description     String?
+  category        String
+  supplierId      String
+  currentStock    Int       @default(0)
+  minStockLevel   Int       @default(0)
+  maxStockLevel   Int       @default(1000)
+  unitCost        Float
+  totalValue      Float     @default(0.0)
+  location        String?
+  status          InventoryStatus @default(IN_STOCK)
+  lastRestocked   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  supplier        Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  alerts          Alert[]
+  
+  @@map("inventory_items")
+}
+
+model Alert {
+  id              String    @id @default(cuid())
+  type            AlertType
+  severity        AlertSeverity @default(MEDIUM)
+  title           String
+  message         String
+  isRead          Boolean   @default(false)
+  isResolved      Boolean   @default(false)
+  supplierId      String?
+  shipmentId      String?
+  inventoryItemId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  supplier        Supplier?      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  shipment        Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  
+  @@map("alerts")
+}
+
+model KPI {
+  id              String    @id @default(cuid())
+  name            String    @unique // Added unique constraint to allow upsert by name
+  value           Float
+  target          Float?
+  unit            String?
+  category        String    // "cost", "performance", "inventory", "quality"
+  period          String    // "daily", "weekly", "monthly", "quarterly"
+  date            DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  
+  @@map("kpis")
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_APPROVAL
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  DELAYED
+  CANCELLED
+  RETURNED
+}
+
+enum AlertType {
+  LOW_STOCK
+  SHIPMENT_DELAY
+  QUALITY_ISSUE
+  COST_VARIANCE
+  SUPPLIER_PERFORMANCE
+  SYSTEM_NOTIFICATION
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InventoryStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+  ON_ORDER
+}
